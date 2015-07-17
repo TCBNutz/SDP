@@ -102,7 +102,8 @@ h=np.hstack((h1,h2,-h1,-h2,h3,hnorm,hpos))
 h=matrix(h)
 
 dims = {'l': 17, 'q': [17], 's': [4]}
-sol = solvers.conelp(c, G, h, dims)
+"sol = solvers.conelp(c, G, h, dims)"
 
 
-
+" three-qubit cluster state stuff "
+PhiPlusP=0.25*np.kron([[1,0],[0,0]],np.kron([[1,1],[1,1]],[[1,0],[0,0]]))+0.25*np.kron([[0,0],[0,1]],np.kron([[1,1],[1,1]],[[0,0],[0,1]]))
