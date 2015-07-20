@@ -4,6 +4,7 @@ density matrix of a segment and translational invariance """
 import numpy as np
 from cvxopt import matrix, solvers
 import string
+from scipy.stats import threshold
 
 digs = string.digits + string.letters
 
@@ -68,13 +69,13 @@ def devectorize(HectorTheVector):
 def toBloch(n):
     U=np.array([[0.+0.j]*4**n]*4**n)
     for i in xrange(4**n):
-        L=np.array(1)
+        L=np.array(1.)
         for k in xrange(n):  
             indexx=int(int2base(i,4).zfill(n)[k])
             L=np.kron(L,Pauli[indexx])
         U[i]=np.conj(vectorize(L))
-    return(U/2**(n/2))
-
+    return(U/(2**(n/2.)))
+"""
 c=np.real(np.dot(toBloch(2),vectorize(np.kron([[1.,0.],[0.,0.]],[[1.,0.],[0.,0.]]))))+np.array([0.0]*16)
 c=matrix(c)
 
@@ -103,7 +104,50 @@ h=matrix(h)
 
 dims = {'l': 17, 'q': [17], 's': [4]}
 "sol = solvers.conelp(c, G, h, dims)"
-
+"""
 
 " three-qubit cluster state stuff "
-PhiPlusP=0.25*np.kron([[1,0],[0,0]],np.kron([[1,1],[1,1]],[[1,0],[0,0]]))+0.25*np.kron([[0,0],[0,1]],np.kron([[1,1],[1,1]],[[0,0],[0,1]]))
+PhiPlusP=0.25*(np.kron([[1,0],[0,0]],np.kron([[1,1],[1,1]],[[1,0],[0,0]]))+\
+               np.kron([[0,1],[0,0]],np.kron([[1,1],[1,1]],[[0,1],[0,0]]))+\
+               np.kron([[0,0],[1,0]],np.kron([[1,1],[1,1]],[[0,0],[1,0]]))+\
+               np.kron([[0,0],[0,1]],np.kron([[1,1],[1,1]],[[0,0],[0,1]])))
+
+PsiPlusM=0.25*(np.kron([[1,0],[0,0]],np.kron([[1,-1],[-1,1]],[[0,0],[0,1]]))+\
+               np.kron([[0,0],[1,0]],np.kron([[1,-1],[-1,1]],[[0,1],[0,0]]))+\
+               np.kron([[0,1],[0,0]],np.kron([[1,-1],[-1,1]],[[0,0],[1,0]]))+\
+               np.kron([[0,0],[0,1]],np.kron([[1,-1],[-1,1]],[[1,0],[0,0]])))
+
+c=np.real(np.dot(toBloch(3),vectorize(PhiPlusP+PsiPlusM)))+[0.]*64
+c=matrix(c)
+
+"reduced density matrix of two qbs after tracing out a boundary qb in a 3qb cluster state"
+Had=np.kron(np.identity(2),1/np.sqrt(2)*np.array([[1,1],[1,-1]]))
+halfhalf=0.25*np.array([[1,0,0,1],[0,1,1,0],[0,1,1,0],[1,0,0,1]])
+dmat=np.dot(Had,np.dot(halfhalf,Had))
+red3=np.real(np.dot(toBloch(2),vectorize(dmat)))
+
+halfhalf=0.5*np.array([[1,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,1]])
+dmat=np.dot(Had,np.dot(halfhalf,Had))
+red1=np.real(np.dot(toBloch(2),vectorize(dmat)))
+
+hnorm3=np.hstack(([1.],[0.]*64))
+hpos3=np.hstack(([0.],[0.]*63))
+h=np.hstack((red1,red3,-red1,-red3,np.array(1.),hnorm3,hpos3))
+h=matrix(h)
+
+GTr1=np.real(np.dot(toBloch(2),np.dot(TrOp([1,0,0]),np.conj(toBloch(3)).T)))
+GTr3=np.real(np.dot(toBloch(2),np.dot(TrOp([0,0,1]),np.conj(toBloch(3)).T)))
+G3=np.real(np.dot(toBloch(3),vectorize(np.identity(8))))
+Gnorm3=np.vstack(([0.]*64,-np.identity(64)))
+Gpos=-np.real(np.conj(toBloch(3)).T)
+
+G=np.vstack((GTr1,GTr3,-GTr1,-GTr3,G3,Gnorm3,Gpos))
+G=matrix(G)
+
+dims = {'l': 65, 'q': [65], 's': [8]}
+sol = solvers.conelp(c, G, h, dims)
+Bloch=threshold(sol['x'], 0.0001)
+print(1/np.sqrt(8.)*Bloch)
+"3qb cluster state as Bloch vector"
+C3=np.real(np.dot(toBloch(3),np.kron(1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.]),1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.]))))
+S=np.dot(GTr3,C3)
