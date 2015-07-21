@@ -5,6 +5,8 @@ import numpy as np
 from cvxopt import matrix, solvers
 import string
 from scipy.stats import threshold
+import math
+import itertools
 
 digs = string.digits + string.letters
 
@@ -21,6 +23,12 @@ def int2base(x, base):
     digits.append('-')
   digits.reverse()
   return ''.join(digits)
+
+def array2base(x,base,ndig):
+    output=[0]*len(x)
+    for i in xrange(len(x)):
+        output[i]=int2base(x[i],base).zfill(ndig)
+    return(output)
 
 z0=np.array([1,0])
 z1=np.array([0,1])
@@ -53,8 +61,8 @@ def TrOp(l):
                 counter=counter+1
         L=np.kron(L,L)
         O=O+L
-    return(O)
-                   
+    return(O)    
+
 
 """ vectorize vectorizes the linear operator (matrix) LinOp """    
 def vectorize(LinOp):
@@ -146,8 +154,7 @@ G=matrix(G)
 
 dims = {'l': 65, 'q': [65], 's': [8]}
 sol = solvers.conelp(c, G, h, dims)
-Bloch=threshold(sol['x'], 0.0001)
-print(1/np.sqrt(8.)*Bloch)
+print(array2base(np.nonzero(threshold(sol['x'], 1e-5))[0],4,int(math.log(len(sol['x']),4))))
 "3qb cluster state as Bloch vector"
 C3=np.real(np.dot(toBloch(3),np.kron(1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.]),1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.]))))
 S=np.dot(GTr3,C3)
