@@ -23,6 +23,12 @@ def int2base(x, base):
   digits.reverse()
   return ''.join(digits)
 
+def array2base(x,base,ndig):
+    output=[0]*len(x)
+    for i in xrange(len(x)):
+        output[i]=int2base(x[i],base).zfill(ndig)
+    return(output)
+
 z0=np.array([1.,0.])
 z1=np.array([0.,1.])
 P=1/np.sqrt(2)*np.array([1.,1.])
@@ -86,44 +92,81 @@ def TMany(x):
         outcome=np.kron(outcome,x[i])
     return(outcome)
 
-" three-qubit cluster state stuff "
-PhiPlusP=0.25*(np.kron([[1,0],[0,0]],np.kron([[1,1],[1,1]],[[1,0],[0,0]]))+\
-               np.kron([[0,1],[0,0]],np.kron([[1,1],[1,1]],[[0,1],[0,0]]))+\
-               np.kron([[0,0],[1,0]],np.kron([[1,1],[1,1]],[[0,0],[1,0]]))+\
-               np.kron([[0,0],[0,1]],np.kron([[1,1],[1,1]],[[0,0],[0,1]])))
+" 5 qb SDP "
 
-PsiPlusM=0.25*(np.kron([[1,0],[0,0]],np.kron([[1,-1],[-1,1]],[[0,0],[0,1]]))+\
-               np.kron([[0,0],[1,0]],np.kron([[1,-1],[-1,1]],[[0,1],[0,0]]))+\
-               np.kron([[0,1],[0,0]],np.kron([[1,-1],[-1,1]],[[0,0],[1,0]]))+\
-               np.kron([[0,0],[0,1]],np.kron([[1,-1],[-1,1]],[[1,0],[0,0]])))
+" making the objective function "
 
-c=np.real(np.dot(toBloch(3),vectorize(PhiPlusP+PsiPlusM)))+[0.]*64
+" 0 + 0 "
+x1=1/np.sqrt(2.)*TMany(np.array([z0,z0,P,z0,z0])) +\
+    1/np.sqrt(2.)*TMany(np.array([z0,z1,P,z1,z0]))
+ZPZ=np.kron(x1,x1)
+
+" 0 + 1 "
+x1=1/np.sqrt(2.)*TMany(np.array([z0,z0,P,z0,z1])) -\
+    1/np.sqrt(2.)*TMany(np.array([z0,z1,P,z1,z1]))
+ZPO=np.kron(x1,x1)
+
+" 0 - 0 "
+x1=1/np.sqrt(2.)*TMany(np.array([z0,z0,M,z1,z0])) +\
+    1/np.sqrt(2.)*TMany(np.array([z0,z1,M,z0,z0]))
+ZMZ=np.kron(x1,x1)
+
+" 0 - 1 "
+x1=1/np.sqrt(2.)*TMany(np.array([z0,z0,M,z1,z1])) -\
+    1/np.sqrt(2.)*TMany(np.array([z0,z1,M,z0,z1]))
+ZMO=np.kron(x1,x1)
+
+" 1 + 0 "
+x1=1/np.sqrt(2.)*TMany(np.array([z1,z0,P,z0,z0])) -\
+    1/np.sqrt(2.)*TMany(np.array([z1,z1,P,z1,z0]))
+OPZ=np.kron(x1,x1)
+
+" 1 + 1 "
+x1=1/np.sqrt(2.)*TMany(np.array([z1,z0,P,z0,z1])) +\
+    1/np.sqrt(2.)*TMany(np.array([z1,z1,P,z1,z1]))
+OPO=np.kron(x1,x1)
+
+" 1 - 0 "
+x1=1/np.sqrt(2.)*TMany(np.array([z1,z0,M,z1,z0])) -\
+    1/np.sqrt(2.)*TMany(np.array([z1,z1,M,z0,z0]))
+OMZ=np.kron(x1,x1)
+
+" 1 - 1 "
+x1=1/np.sqrt(2.)*TMany(np.array([z1,z0,M,z1,z1])) +\
+    1/np.sqrt(2.)*TMany(np.array([z1,z1,M,z0,z1]))
+OMO=np.kron(x1,x1)
+
+c=np.real(np.dot(toBloch(5),ZPZ+ZPO+ZMZ+ZMO+OPZ+OPO+OMZ+OMO))+[0.]*1024
 c=matrix(c)
 
-"reduced density matrix of two qbs after tracing out a boundary qb in a 3qb cluster state"
-Had=np.kron(np.identity(2),1/np.sqrt(2)*np.array([[1,1],[1,-1]]))
-halfhalf=0.25*np.array([[1,0,0,1],[0,1,1,0],[0,1,1,0],[1,0,0,1]])
-dmat=np.dot(Had,np.dot(halfhalf,Had))
-red3=np.real(np.dot(toBloch(2),vectorize(dmat)))
 
-halfhalf=0.5*np.array([[1,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,1]])
-dmat=np.dot(Had,np.dot(halfhalf,Had))
-red1=np.real(np.dot(toBloch(2),vectorize(dmat)))
+" making the reduced state of three qubits "
+C3=1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.])
+C3=np.kron(C3,C3)
+O1=np.kron(TMany(np.array([Z,I,I])),TMany(np.array([Z,I,I])).T)
+O2=np.kron(TMany(np.array([I,I,Z])),TMany(np.array([I,I,Z])).T)
+O3=np.kron(TMany(np.array([Z,I,Z])),TMany(np.array([Z,I,Z])).T)
+red=0.25*(C3+np.dot(O1,C3)+np.dot(O2,C3)+np.dot(O3,C3))
+red=np.real(np.dot(toBloch(3),red))
 
-hnorm3=np.hstack(([1.],[0.]*64))
-hpos3=np.hstack(([0.],[0.]*63))
-h=np.hstack((red1,red3,-red1,-red3,np.array(1.),hnorm3,hpos3))
-h=matrix(h)
+" making G "
 
-GTr1=np.real(np.dot(toBloch(2),np.dot(TrOp([1,0,0]),np.conj(toBloch(3)).T)))
-GTr3=np.real(np.dot(toBloch(2),np.dot(TrOp([0,0,1]),np.conj(toBloch(3)).T)))
-G3=np.real(np.dot(toBloch(3),vectorize(np.identity(8))))
-Gnorm3=np.vstack(([0.]*64,-np.identity(64)))
-Gpos=-np.real(np.conj(toBloch(3)).T)
+GTr1=np.real(np.dot(toBloch(3),np.dot(TrOp([0,0,0,1,1]),np.conj(toBloch(5)).T)))
+GTr2=np.real(np.dot(toBloch(3),np.dot(TrOp([1,0,0,0,1]),np.conj(toBloch(5)).T)))
+GTr3=np.real(np.dot(toBloch(3),np.dot(TrOp([1,1,0,0,0]),np.conj(toBloch(5)).T)))
+Gid=np.real(np.dot(toBloch(5),vectorize(np.identity(32))))
+Gnorm5=np.vstack(([0.]*1024,-np.identity(1024)))
+Gpos=-np.real(np.conj(toBloch(5)).T)
 
-G=np.vstack((GTr1,GTr3,-GTr1,-GTr3,G3,Gnorm3,Gpos))
+G=np.vstack((GTr1,GTr2,GTr3,-GTr1,-GTr2,-GTr3,Gid,Gnorm5,Gpos))
 G=matrix(G)
 
-dims = {'l': 65, 'q': [65], 's': [8]}
+
+hnorm5=np.hstack(([1.],[0.]*1024))
+hpos5=[0.]*1024
+h=np.hstack((red,red,red,-red,-red,-red,np.array(1.),hnorm5,hpos5))
+h=matrix(h)
+
+dims = {'l': 385, 'q': [1025], 's': [32]}
 sol = solvers.conelp(c, G, h, dims)
 print(array2base(np.nonzero(threshold(sol['x'], 1e-5))[0],4,int(math.log(len(sol['x']),4))))
