@@ -6,7 +6,6 @@ from cvxopt import matrix, solvers
 import string
 from scipy.stats import threshold
 import math
-import itertools
 
 digs = string.digits + string.letters
 
@@ -24,14 +23,10 @@ def int2base(x, base):
   digits.reverse()
   return ''.join(digits)
 
-def array2base(x,base,ndig):
-    output=[0]*len(x)
-    for i in xrange(len(x)):
-        output[i]=int2base(x[i],base).zfill(ndig)
-    return(output)
-
-z0=np.array([1,0])
-z1=np.array([0,1])
+z0=np.array([1.,0.])
+z1=np.array([0.,1.])
+P=1/np.sqrt(2)*np.array([1.,1.])
+M=1/np.sqrt(2)*np.array([1.,-1.])
 
 I=np.array([[1,0],[0,1]])
 X=np.array([[0,1],[1,0]])
@@ -83,36 +78,13 @@ def toBloch(n):
             L=np.kron(L,Pauli[indexx])
         U[i]=np.conj(vectorize(L))
     return(U/(2**(n/2.)))
-"""
-c=np.real(np.dot(toBloch(2),vectorize(np.kron([[1.,0.],[0.,0.]],[[1.,0.],[0.,0.]]))))+np.array([0.0]*16)
-c=matrix(c)
 
-" positive orthant constraints "
-T1=np.real(np.dot(toBloch(1),np.dot(TrOp([1,0]),np.conj(toBloch(2)).T)))
-h1=np.real(np.dot(toBloch(1),np.array([1.,0.,0.,0.])))
-T2=np.real(np.dot(toBloch(1),np.dot(TrOp([0,1]),np.conj(toBloch(2)).T)))
-h2=h1
-vecId=np.real(np.dot(toBloch(2),vectorize(np.identity(4))))
-h3=np.array(1.)
-
-" second order constraints "
-Gnorm=np.vstack(([0.]*16,-np.identity(16)))
-hnorm=np.hstack(([1.],[0.]*16))
-
-" positive-semidefinite cone "
-Gpos=-np.real(np.conj(toBloch(2)).T)
-hpos=-np.hstack(([0.],[0.]*15))
-
-" putting junk together "
-G=np.vstack((T1,T2,-T1,-T2,vecId,Gnorm,Gpos))
-G=matrix(G)
-
-h=np.hstack((h1,h2,-h1,-h2,h3,hnorm,hpos))
-h=matrix(h)
-
-dims = {'l': 17, 'q': [17], 's': [4]}
-"sol = solvers.conelp(c, G, h, dims)"
-"""
+" tensor product of many matrices "
+def TMany(x):
+    outcome=np.array(1.)
+    for i in xrange(len(x)):
+        outcome=np.kron(outcome,x[i])
+    return(outcome)
 
 " three-qubit cluster state stuff "
 PhiPlusP=0.25*(np.kron([[1,0],[0,0]],np.kron([[1,1],[1,1]],[[1,0],[0,0]]))+\
@@ -155,6 +127,3 @@ G=matrix(G)
 dims = {'l': 65, 'q': [65], 's': [8]}
 sol = solvers.conelp(c, G, h, dims)
 print(array2base(np.nonzero(threshold(sol['x'], 1e-5))[0],4,int(math.log(len(sol['x']),4))))
-"3qb cluster state as Bloch vector"
-C3=np.real(np.dot(toBloch(3),np.kron(1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.]),1/np.sqrt(8.)*np.array([1.,1.,1.,-1.,1.,1.,-1.,1.]))))
-S=np.dot(GTr3,C3)
