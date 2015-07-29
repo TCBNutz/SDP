@@ -148,16 +148,16 @@ if __name__ == '__main__':
     Gnorm5 = np.vstack(([0.] * 1024, -np.identity(1024)))
     Gpos = -np.real(np.conj(toBloch(5)).T)
 
-    G = np.vstack((GTr1, GTr2, GTr3, -GTr1, -GTr2, -GTr3, Gid, Gnorm5, Gpos))
+    G = np.vstack((GTr1, GTr2, GTr3, -GTr1, -GTr2, -GTr3,Gnorm5, Gpos))
     G = matrix(G)
 
     hnorm5 = np.hstack(([1.], [0.] * 1024))
     hpos5 = [0.] * 1024
     h = np.hstack(
-        (red, red, red, -red, -red, -red, np.array(1.), hnorm5, hpos5))
+        (red, red, red, -red, -red, -red, hnorm5, hpos5))
     h = matrix(h)
 
-    dims = {'l': 385, 'q': [1025], 's': [32]}
+    dims = {'l': 384, 'q': [1025], 's': [32]}
     sol = solvers.conelp(c, G, h, dims)
     print(
         array2base(np.nonzero(threshold(sol['x'], 1e-7))[0], 4, int(math.log(len(sol['x']), 4))))
