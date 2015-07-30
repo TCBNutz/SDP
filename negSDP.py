@@ -3,7 +3,6 @@ density matrix of a segment and translational invariance """
 
 import numpy as np
 from cvxopt import matrix, solvers
-from scipy.stats import threshold
 import math
 import itertools
 
@@ -131,75 +130,33 @@ def ClusterState(n):
 
 
 if __name__ == '__main__':
-    " making the objective function "
-    al=TMany([z0,z0,P,z0,z0])
-    al=np.kron(al,al.T)
-    be=TMany([z0,z0,P,z1,z0])
-    be=np.kron(be,be.T)
-    ga=TMany([z0,z1,P,z0,z0])
-    ga=np.kron(ga,ga.T)
-    de=TMany([z0,z1,P,z1,z0])
-    de=np.kron(de,de.T)
-    abcd=np.dot(toBloch(5),al+be+ga+de)
-    PP=8.*np.kron(TMany([z0,I,P,I,z0]),TMany([z0,I,P,I,z0]))
-    abcd=np.dot([1.]+[0.]*15,PP)
-    c=np.real(np.hstack(([0.]*1024,[-1.]+[0.]*1023))) + [0.]*2048
-    c=matrix(c)
-    
-    " making the ideal reduced state of three qubits "
-    C3 = 1 / np.sqrt(8.) * np.array([1., 1., 1., -1., 1., 1., -1., 1.])
-    C3 = np.kron(C3, C3)
-    O1 = np.kron(k("ZII"), k("ZII").T)
-    O2 = np.kron(k("IIZ"), k("IIZ").T)
-    O3 = np.kron(k("ZIZ"), k("ZIZ").T)
-    red = 0.25 * (C3 + np.dot(O1, C3) + np.dot(O2, C3) + np.dot(O3, C3))
-    red = np.real(np.dot(toBloch(3), red))
+    fBloch=np.conj(toBloch(5)).T
+    pro=8*TMany([z0,I,P,I,z0,z0,I,P,I,z0])
 
-    " making G "
-    GTr1 = np.real(
-        np.dot(toBloch(3), np.dot(TrOp([0, 0, 0, 1, 1]), np.conj(toBloch(5)).T)))
-    GTr1=np.dot(GTr1,np.kron([1.,1.],np.identity(1024)))
-    
-    GTr2 = np.real(
-        np.dot(toBloch(3), np.dot(TrOp([1, 0, 0, 0, 1]), np.conj(toBloch(5)).T)))
-    GTr2=np.dot(GTr2,np.kron([1.,1.],np.identity(1024)))
-    
-    GTr3 = np.real(
-        np.dot(toBloch(3), np.dot(TrOp([1, 1, 0, 0, 0]), np.conj(toBloch(5)).T)))
-    GTr3=np.dot(GTr3,np.kron([1.,1.],np.identity(1024)))
-    
-    Gid = 2**(5./2.)*np.array([1.]+[0.]*1023+[1.]+[0.]*1023)
-        
-    Gnorm5 = np.vstack(([0.] * 2048,-np.kron([1.,1.],np.identity(1024))))
+    c=-DMany([np.kron([0.,1.],fBloch).T,pro.T,PT.T,vectorize(np.identity(4))])
+    c=matrix(np.real(c) + [0.]*2048)
 
-    Gnorm51 = np.vstack(([0.] * 2048,-np.kron([1.,0.],np.identity(1024))))
+    G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0]),fBloch]))
+    h1=DMany([toBloch(3),TrOp([1,1,0,0,0]),vectorize(ClusterState(5))])
 
-    Gnorm52 = np.vstack(([0.] * 2048,-np.kron([0.,-1.],np.identity(1024))))
-    
-    Gpos = -np.real(np.conj(toBloch(5)).T)
-    Gpos=np.dot(Gpos,np.kron([1.,1.],np.identity(1024)))
-    
-    GposPT1 = - np.real(DMany([PT,PP,np.conj(toBloch(5)).T,np.kron([1.,0.],np.identity(1024))]))
+    G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1]),fBloch]))
+    h2=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
 
-    GposPT2 = np.real(DMany([PT,PP,np.conj(toBloch(5)).T,np.kron([0.,1.],np.identity(1024))]))
-    
-    G = np.vstack((GTr1, GTr2, GTr3, -GTr1, -GTr2, -GTr3,Gnorm5,Gnorm51,Gnorm52,Gpos,GposPT1,GposPT2))
-    G = matrix(G)
+    G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1]),fBloch]))
+    h3=DMany([toBloch(3),TrOp([0,0,0,1,1]),vectorize(ClusterState(5))])
 
-    hnorm5 = np.hstack(([1.], [0.] * 1024))
-    
-    hpos5 = [0.] * 1024
+    Gnorm1=np.vstack(([0.]*2048,np.kron([0.,-1.],np.identity(1024))))
+    Gnorm2=np.vstack(([0.]*2048,np.kron([-1.,0.],np.identity(1024))))
+    hnorm=[100.]+[0.]*1024
 
-    hposPT1=[0.]*16
+    G4=-np.kron([1.,0.],DMany([PT,pro,fBloch]))
+    G5=np.kron([0.,1.],DMany([PT,pro,fBloch]))
+    hpos1=[0.]*16
+    G6=-np.kron([1.,1.],fBloch)
+    hpos2=[0.]*1024
 
-    hposPT2=[0.]*16
-    
-    h = np.hstack(
-        (red, red, red, -red, -red, -red,hnorm5,hnorm5,hnorm5,hpos5,hposPT1,hposPT2))
-    h = matrix(h)
-    
-    dims = {'l': 384, 'q': [1025,1025,1025], 's': [32,4,4]}
-    
+    G=matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3,Gnorm1,Gnorm2,G4,G5,G6))) + [[0.]*2048]*3490)
+    h=matrix(np.real(np.hstack((h1,-h1,h2,-h2,h3,-h3,hnorm,hnorm,hpos1,hpos1,hpos2)))+[0.]*3490)
+
+    dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
     sol = solvers.conelp(c, G, h, dims)
-    print(
-        array2base(np.nonzero(threshold(sol['x'], 1e-7))[0], 4, int(math.log(len(sol['x']), 4))))
