@@ -1,6 +1,6 @@
 import numpy as np
 from cvxopt import matrix,solvers
-from negSDP import devectorize,vectorize,toBloch,PT,DMany,TMany,PhiPlus,I,P,ClusterState, TrOp
+from negSDP import devectorize,vectorize,toBloch,PT,DMany,TMany,PhiPlus,I,P,ClusterState, TrOp, array2base
 
 fBloch=np.conj(toBloch(3)).T
 pro=2*TMany([I,P,I,I,P,I])
@@ -31,4 +31,4 @@ dims={'l':64 ,'q':[65,65], 's':[4,4,8]}
 sol = solvers.conelp(c, G, h, dims)
 
 p=sol['x']
-print np.linalg.eig(devectorize(np.dot(fBloch,p[:64]+p[64:])))[0]
+print array2base(np.nonzero(np.around(p[:64]+p[64:],7))[0],4,3)
