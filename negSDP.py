@@ -137,13 +137,13 @@ if __name__ == '__main__':
     c=matrix(np.real(c) + [0.]*2048)
 
     G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0]),fBloch]))
-    h1=DMany([toBloch(3),TrOp([1,1,0,0,0]),vectorize(ClusterState(5))])
+    h1=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
 
     G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1]),fBloch]))
     h2=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
 
     G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1]),fBloch]))
-    h3=DMany([toBloch(3),TrOp([0,0,0,1,1]),vectorize(ClusterState(5))])
+    h3=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
 
     Gnorm1=np.vstack(([0.]*2048,np.kron([0.,-1.],np.identity(1024))))
     Gnorm2=np.vstack(([0.]*2048,np.kron([-1.,0.],np.identity(1024))))
@@ -160,3 +160,8 @@ if __name__ == '__main__':
 
     dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
     sol = solvers.conelp(c, G, h, dims)
+
+    p=sol['x']
+    print np.max(np.linalg.eig(devectorize(np.dot(G4,p)))[0])
+    print np.max(np.linalg.eig(devectorize(np.dot(G5,p)))[0])
+    print np.max(np.linalg.eig(devectorize(np.dot(G6,p)))[0])
