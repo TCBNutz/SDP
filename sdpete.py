@@ -19,7 +19,10 @@ Z = np.array([[1, 0], [0, -1]])
 Pauli = [I, X, Y, Z]
 table = {"0": z0, "1": z1, "P": P, "M": M, "I": I, "X": X, "Y": Y, "Z": Z}
 
-
+def state2dm(state):
+    """ makes density matrix for pure state """
+    return np.kron([[state[i]] for i in xrange(len(state))],state)
+    
 def int2base(x, base):
     """ Represent a number in some base """
     return np.base_repr(x, base).lower()

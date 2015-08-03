@@ -5,6 +5,7 @@ import numpy as np
 from cvxopt import matrix, solvers
 import math
 import itertools
+from red import *
 
 # Constants
 ir2 = 1 / np.sqrt(2)
@@ -130,38 +131,41 @@ def ClusterState(n):
 
 
 if __name__ == '__main__':
-    fBloch=np.conj(toBloch(5)).T
-    pro=8*TMany([z0,I,P,I,z0,z0,I,P,I,z0])
+    a=[0]*100
+    for v in xrange(90):
+        fBloch=np.conj(toBloch(5)).T
+        pro=8*TMany([z0,I,P,I,z0,z0,I,P,I,z0])
 
-    c=-DMany([np.kron([0.,1.],fBloch).T,pro.T,PT.T,vectorize(np.identity(4))])
-    c=matrix(np.real(c) + [0.]*2048)
+        c=-DMany([np.kron([0.,1.],fBloch).T,pro.T,PT.T,vectorize(np.identity(4))])
+        c=matrix(np.real(c) + [0.]*2048)
 
-    G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0]),fBloch]))
-    h1=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
+        G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0]),fBloch]))
+        h1=DMany([toBloch(3),TrOp([1,1,0,0,0,1]),vectorize(YfaultyCluster(5,0.01+v*0.01))])
 
-    G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1]),fBloch]))
-    h2=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
+        G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1]),fBloch]))
 
-    G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1]),fBloch]))
-    h3=DMany([toBloch(3),TrOp([1,0,0,0,1]),vectorize(ClusterState(5))])
+        G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1]),fBloch]))
 
-    Gnorm1=np.vstack(([0.]*2048,np.kron([0.,-1.],np.identity(1024))))
-    Gnorm2=np.vstack(([0.]*2048,np.kron([-1.,0.],np.identity(1024))))
-    hnorm=[100.]+[0.]*1024
+        Gnorm1=np.vstack(([0.]*2048,np.kron([0.,-1.],np.identity(1024))))
+        Gnorm2=np.vstack(([0.]*2048,np.kron([-1.,0.],np.identity(1024))))
+        hnorm=[100.]+[0.]*1024
 
-    G4=-np.kron([1.,0.],DMany([PT,pro,fBloch]))
-    G5=np.kron([0.,1.],DMany([PT,pro,fBloch]))
-    hpos1=[0.]*16
-    G6=-np.kron([1.,1.],fBloch)
-    hpos2=[0.]*1024
+        G4=-np.kron([1.,0.],DMany([PT,pro,fBloch]))
+        G5=np.kron([0.,1.],DMany([PT,pro,fBloch]))
+        hpos1=[0.]*16
+        G6=-np.kron([1.,1.],fBloch)
+        hpos2=[0.]*1024
 
-    G=matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3,Gnorm1,Gnorm2,G4,G5,G6))) + [[0.]*2048]*3490)
-    h=matrix(np.real(np.hstack((h1,-h1,h2,-h2,h3,-h3,hnorm,hnorm,hpos1,hpos1,hpos2)))+[0.]*3490)
+        G=matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3,Gnorm1,Gnorm2,G4,G5,G6))) + [[0.]*2048]*3490)
+        h=matrix(np.real(np.hstack((h1,-h1,h1,-h1,h1,-h1,hnorm,hnorm,hpos1,hpos1,hpos2)))+[0.]*3490)
 
-    dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
-    sol = solvers.conelp(c, G, h, dims)
+        dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
+        sol = solvers.conelp(c, G, h, dims)
 
-    p=sol['x']
-    print np.max(np.linalg.eig(devectorize(np.dot(G4,p)))[0])
-    print np.max(np.linalg.eig(devectorize(np.dot(G5,p)))[0])
-    print np.max(np.linalg.eig(devectorize(np.dot(G6,p)))[0])
+        "these things should not be more than numerical error positive"
+        p=sol['x']
+        print np.max(np.linalg.eig(devectorize(np.dot(G4,p)))[0])
+        print np.max(np.linalg.eig(devectorize(np.dot(G5,p)))[0])
+        print np.max(np.linalg.eig(devectorize(np.dot(G6,p)))[0])
+        a[v]=np.dot(c.T,p)[0][0]
+    print a
