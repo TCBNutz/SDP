@@ -3,42 +3,38 @@ density matrix of a segment and translational invariance  """
 
 import numpy as np
 from cvxopt import matrix, solvers, sparse
-from multiprocessing import Pool
-import timeit
 from stuff import *
 
 if __name__ == '__main__':
-        fBloch=np.conj(toBloch(6)).T#3.125% sparse
-        pro=8*TMany([z0,I,P,P,I,z0,z0,I,P,P,I,z0])#0.4% sparse
+        fBloch=np.conj(toBloch(5)).T#3.125% sparse
+        pro=8*TMany([z0,I,P,I,z0,z0,I,P,I,z0])#0.4% sparse
 
         c=-DMany([np.kron([0.,1.],fBloch).T,pro.T,PT.T,vectorize(np.identity(4))])
-        c=matrix(np.real(c) + [0.]*8192)
+        c=matrix(np.real(c) + [0.]*2048)
 
-        G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,1,0,0,0]),fBloch])) #0.8% sparse
+        G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0]),fBloch])) #0.8% sparse
 
 
-        G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0,1]),fBloch])) #0.8% sparse
+        G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1]),fBloch])) #0.8% sparse
 
-        G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1,1]),fBloch])) #0.8% sparse
+        G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1]),fBloch])) #0.8% sparse
 
-	G4=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1,1]),fBloch]))
-
-        Gnorm1=np.vstack(([0.]*8192,np.kron([0.,-1.],np.identity(4096))))
-        Gnorm2=np.vstack(([0.]*8192,np.kron([-1.,0.],np.identity(4096))))
-        hnorm=[100.]+[0.]*4096
+        Gnorm1=np.vstack(([0.]*2048,np.kron([0.,-1.],np.identity(1024))))
+        Gnorm2=np.vstack(([0.]*2048,np.kron([-1.,0.],np.identity(1024))))
+        hnorm=[100.]+[0.]*1024
 
         G5=-np.kron([1.,0.],DMany([PT,pro,fBloch]))
         G6=np.kron([0.,1.],DMany([PT,pro,fBloch]))
         hpos1=[0.]*16
         G7=-np.kron([1.,1.],fBloch)
-        hpos2=[0.]*4096
+        hpos2=[0.]*1024
 
-        G=sparse(matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3,G4,-G4,Gnorm1,Gnorm2,G5,G6,G7))) + [[0.]*8192]*12834))
+        G=sparse(matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3,Gnorm1,Gnorm2,G5,G6,G7))) + [[0.]*2048]*3490))
 
         state=YfaultyCluster(5,0.01)
         h1=DMany([toBloch(3),TrOp([1,1,0,0,0,1]),vectorize(state)])
-        h=matrix(np.real(np.hstack((h1,-h1,h1,-h1,h1,-h1,h1,-h1,hnorm,hnorm,hpos1,hpos1,hpos2)))+[0.]*12834)
+        h=matrix(np.real(np.hstack((h1,-h1,h1,-h1,h1,-h1,hnorm,hnorm,hpos1,hpos1,hpos2)))+[0.]*3490)
 
-        dims={'l':512 ,'q':[4097,4097], 's':[4,4,64]}
+        dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
 
         sol=solvers.conelp(c, G, h, dims)
