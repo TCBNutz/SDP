@@ -41,16 +41,4 @@ if __name__ == '__main__':
 
         dims={'l':512 ,'q':[4097,4097], 's':[4,4,64]}
 
-        def SDP():
-                return solvers.conelp(c, G, h, dims)
-
-        t=timeit.Timer("SDP()","from __main__ import SDP")
-        time=t.timeit(1)
-        print time
-
-        """
-	def SDPp():
-		p=Pool(4)
-		a=p.map(SDP,[1])
-		return a
-        """
+        sol=solvers.conelp(c, G, h, dims)
