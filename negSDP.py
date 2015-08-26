@@ -48,9 +48,9 @@ if __name__ == '__main__':
         time=t.timeit(1)
         print time
 
-        """
+        """ 
 	def SDPp():
-		p=Pool(4)
+		p=Pool(4) #parallelizing
 		a=p.map(SDP,[1])
 		return a
         """
