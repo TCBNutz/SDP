@@ -1,5 +1,5 @@
 """ semidefinite optimization of localizable entanglement, given the reduced
-density matrix of a segment and translational invariance  """
+density matrix of a segment and translational invariance """
 
 import numpy as np
 from cvxopt import matrix, solvers, sparse
