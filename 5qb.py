@@ -4,6 +4,7 @@ density matrix of a segment and translational invariance  """
 import numpy as np
 from cvxopt import matrix, solvers, sparse
 from stuff import *
+import timeit
 
 if __name__ == '__main__':
         M1=np.array([[0]*1888]*1024)
@@ -53,4 +54,11 @@ if __name__ == '__main__':
         
         dims={'l':0 ,'q':[865,1025], 's':[4,4,32]}
 
-        sol=solvers.conelp(c, G, h, dims)
+        #sol=solvers.conelp(c, G, h, dims)
+
+        def SDP():
+                return solvers.conelp(c, G, h, dims)
+
+        t=timeit.Timer("SDP()","from __main__ import SDP")
+        time=t.timeit(1)
+        print time
