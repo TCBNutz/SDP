@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 # Constants
 ir2 = 1 / np.sqrt(2)
@@ -175,11 +176,12 @@ def Num2Op(string):
     stringnew=[dici[string[k]] for k in xrange(len(string))]
     return "".join(stringnew)
 
-def skim(BlochVector,n):
+def skim(BlochVector):
     """
-    finds the operators that have expectation values > 1e-6.
+    finds the operators that have expectation values > 1e-5.
     """
-    BV=np.around(BlochVector,6)
+    n=int(math.log(len(BlochVector),4))
+    BV=np.around(BlochVector,5)
     pos=np.nonzero(BV)[0]
     ski=array2base(pos,4,n)
     ski1=[Num2Op(ski[i])+'='+str(BV[pos[i]]) for i in xrange(len(ski))]
