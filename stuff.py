@@ -186,4 +186,12 @@ def skim(BlochVector):
     ski=array2base(pos,4,n)
     ski1=[Num2Op(ski[i])+'='+str(BV[pos[i]]) for i in xrange(len(ski))]
     return np.matrix(ski1)
+
+def ketbra(ket1,ket2):
+    """
+    makes |ket1><ket2|
+    """
+    rv=np.array([[ket1[a]] for a in xrange(len(ket1))])
+    cv=np.conj(ket2)
+    return np.kron(rv,cv)
     
