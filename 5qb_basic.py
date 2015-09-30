@@ -37,4 +37,16 @@ if __name__ == '__main__':
 
         dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
 
-        sol=solvers.conelp(c, G, h, dims)
+        #sol=solvers.conelp(c, G, h, dims)
+
+        Gone=sparse(matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3))) + [[0.]*2048]*384))
+        Gtwo=[sparse(matrix(np.real(np.vstack((G5))) + [[0.]*2048]*16))]
+        Gtwo +=[sparse(matrix(np.real(np.vstack((G6))) + [[0.]*2048]*16))]
+        Gtwo +=[sparse(matrix(np.real(np.vstack((G7))) + [[0.]*2048]*1024))]
+        hone=matrix(np.real(np.hstack((h1,-h1,h1,-h1,h1,-h1)))+[0.]*384)
+        htwo=[matrix([[0.]*4]*4)]
+        htwo +=[matrix([[0.]*4]*4)]
+        htwo +=[matrix([[0.]*32]*32)]
+        
+        sol=solvers.sdp(c,Gl=Gone,hl=hone,Gs=Gtwo,hs=htwo,solver='dsdp')
+        print np.dot(c.T,sol['x'])
