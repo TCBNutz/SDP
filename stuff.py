@@ -1,8 +1,5 @@
-"""
-collection of auxilliary functions
-"""
-
 import numpy as np
+import math
 
 # Constants
 ir2 = 1 / np.sqrt(2)
@@ -16,6 +13,7 @@ Y = np.array([[0, -1j], [1j, 0]])
 Z = np.array([[1, 0], [0, -1]])
 Pauli = [I, X, Y, Z]
 table = {"0": z0, "1": z1, "P": P, "M": M, "I": I, "X": X, "Y": Y, "Z": Z}
+dici={'0':'I','1':'X','2':'Y','3':'Z'}
 
 "partial transpose acting on vectorized 2qb density matrix in computational basis"
 PT=np.array([[1.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],\
@@ -168,3 +166,32 @@ def negativity(rho):
     """
     pt=devectorize(np.dot(PT,vectorize(rho)))
     return 0.5*(sum(np.abs(np.linalg.eig(pt)[0]))-1)
+
+def Num2Op(string):
+    """
+    replaces a string of integers with a string of {I,X,Y,Z}, as in
+    '313' to 'ZXZ'
+    """
+    string=list(string)
+    stringnew=[dici[string[k]] for k in xrange(len(string))]
+    return "".join(stringnew)
+
+def skim(BlochVector):
+    """
+    finds the operators that have expectation values > 1e-5.
+    """
+    n=int(math.log(len(BlochVector),4))
+    BV=np.around(BlochVector,5)
+    pos=np.nonzero(BV)[0]
+    ski=array2base(pos,4,n)
+    ski1=[Num2Op(ski[i])+'='+str(BV[pos[i]]) for i in xrange(len(ski))]
+    return np.matrix(ski1)
+
+def ketbra(ket1,ket2):
+    """
+    makes |ket1><ket2|
+    """
+    rv=np.array([[ket1[a]] for a in xrange(len(ket1))])
+    cv=np.conj(ket2)
+    return np.kron(rv,cv)
+    
