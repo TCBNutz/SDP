@@ -1,8 +1,8 @@
-""" making the density matrix of a Cluster state approximation assuming Markovian noise
-on the emitter and perfect CNOT gates"""
+"""
+collection of auxilliary functions
+"""
 
-"from sdpete import *"
-from negSDP import *
+import numpy as np
 
 # Constants
 ir2 = 1 / np.sqrt(2)
