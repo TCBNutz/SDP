@@ -39,14 +39,19 @@ if __name__ == '__main__':
 
         #sol=solvers.conelp(c, G, h, dims)
 
-        Gone=sparse(matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3))) + [[0.]*2048]*384))
+        GfourR=np.kron([1.,1.],DMany([toBloch(4),TrOp([1,0,0,0,0]),fBloch]))
+        GfourL=np.kron([1.,1.],DMany([toBloch(4),TrOp([0,0,0,0,1]),fBloch]))
+        Gfour=GfourR-GfourL
+        hfour=np.array([0.]*256)
+
+        Gone=sparse(matrix(np.real(np.vstack((G1,-G1,Gfour,-Gfour))) + [[0.]*2048]*640))
         Gtwo=[sparse(matrix(np.real(np.vstack((G5))) + [[0.]*2048]*16))]
         Gtwo +=[sparse(matrix(np.real(np.vstack((G6))) + [[0.]*2048]*16))]
         Gtwo +=[sparse(matrix(np.real(np.vstack((G7))) + [[0.]*2048]*1024))]
-        hone=matrix(np.real(np.hstack((h1,-h1,h1,-h1,h1,-h1)))+[0.]*384)
+        hone=matrix(np.real(np.hstack((h1,-h1,hfour,-hfour)))+[0.]*640)
         htwo=[matrix([[0.]*4]*4)]
         htwo +=[matrix([[0.]*4]*4)]
         htwo +=[matrix([[0.]*32]*32)]
-        
+        solvers.options['reltol']=1e-11
         sol=solvers.sdp(c,Gl=Gone,hl=hone,Gs=Gtwo,hs=htwo,solver='dsdp')
         print np.dot(c.T,sol['x'])
