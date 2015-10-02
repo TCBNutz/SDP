@@ -1,10 +1,36 @@
-""" semidefinite optimization of localizable entanglement, given the reduced
-density matrix of a segment and translational invariance  """
+import sys
+import mosek
+import mosek.fusion
+from   mosek.fusion import *
 
-import numpy as np
-from cvxopt import matrix, solvers, sparse
-from stuff import *
+
+def main(args):
+    rho=
+
+    with Model("Negativity") as M:
+
+      # Setting up the variables
+      X = M.variable("X", Domain.inPSDCone(N))
+      t = M.variable("t", 1, Domain.unbounded())
+
+      # (t, vec (A-X)) \in Q
+      M.constraint("C1", Expr.vstack(t, vec(Expr.sub(DenseMatrix(A),X))), Domain.inQCone() );
+
+      # diag(X) = e
+      M.constraint("C2",X.diag(), Domain.equalsTo(1.0))
+
+      # Objective: Minimize t
+      M.objective(ObjectiveSense.Minimize, t)
+                        
+      # Solve the problem
+      M.solve()
+
+#      M.writeTask('nearestcorr.task')
+
+      # Get the solution values
+      print "X = ", X.level()
+      
+      print t.level()
 
 if __name__ == '__main__':
-        fBloch=np.conj(toBloch(3)).T#3.125% sparse
-
+    main(sys.argv[1:])
