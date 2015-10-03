@@ -1,36 +1,36 @@
+import mosek.fusion 
+from   mosek.fusion import * 
+from stuff import *
+import numpy as np
 import sys
-import mosek
-import mosek.fusion
-from   mosek.fusion import *
+
+# Werner state with lambda=0.5
+"""
+rho=0.125*np.identity(4)+0.5*state2dm(ir2*np.array([1,0,0,1]))
+
+def ParTrans(r):
+        return(devectorize(np.dot(PT,vectorize(r))))
+
+rhoTB=ParTrans(rho)
+"""
+rhoTB=[[ 0.375,  0.   ,  0.   ,  0.   ],
+       [ 0.   ,  0.125,  0.25 ,  0.   ],
+       [ 0.   ,  0.25 ,  0.125,  0.   ],
+       [ 0.   ,  0.   ,  0.   ,  0.375]]
 
 
-def main(args):
-    rho=
+def main():
 
     with Model("Negativity") as M:
+        Xx=M.variable("Xx",Domain.inPSDCone(4))
+        Yy=M.variable("Yy",Domain.inPSDCone(4))
+        C=M.constraint("this",Expr.sub(Xx,Yy),Domain.equalsTo(DenseMatrix(rhoTB)))
+        M.objective(ObjectiveSense.Minimize,Expr.sum(Yy.diag()))
+        M.solve()
+        return np.reshape(Yy.level(),(4,4))
 
-      # Setting up the variables
-      X = M.variable("X", Domain.inPSDCone(N))
-      t = M.variable("t", 1, Domain.unbounded())
+ 
+if __name__ == '__main__': 
+    print main()
+    sys.exit(0)     
 
-      # (t, vec (A-X)) \in Q
-      M.constraint("C1", Expr.vstack(t, vec(Expr.sub(DenseMatrix(A),X))), Domain.inQCone() );
-
-      # diag(X) = e
-      M.constraint("C2",X.diag(), Domain.equalsTo(1.0))
-
-      # Objective: Minimize t
-      M.objective(ObjectiveSense.Minimize, t)
-                        
-      # Solve the problem
-      M.solve()
-
-#      M.writeTask('nearestcorr.task')
-
-      # Get the solution values
-      print "X = ", X.level()
-      
-      print t.level()
-
-if __name__ == '__main__':
-    main(sys.argv[1:])
