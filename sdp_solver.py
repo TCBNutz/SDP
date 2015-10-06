@@ -1,57 +1,72 @@
-""" semidefinite optimization of localizable entanglement, given the reduced
-density matrix of a segment and translational invariance  """
-
-import numpy as np
-from cvxopt import matrix, solvers, sparse
+import mosek.fusion 
+from   mosek.fusion import * 
 from stuff import *
+import numpy as np
+import math
+import sys
+from scipy import sparse
+
+def makeSparse(mat):
+    titi=sparse.coo_matrix(np.around(mat,6))
+    a=[int(list(titi.row)[i]) for i in xrange(len(titi.row))]
+    b=[int(list(titi.col)[i]) for i in xrange(len(titi.col))]
+    c=list(titi.data)
+    return Matrix.sparse(len(mat),len(mat[0]),a,b,c)
+
+n=5
+m=3
+state=YfaultyCluster(5,0.01)
+h1=devectorize(np.dot(TrOp([1,1,0,0,0,1]),vectorize(state)))
+red=h1
+pro=8*TMany([z0,I,P,I,z0,z0,I,P,I,z0])
+fBloch=np.conj(toBloch(n)).T
+m=int(math.log(len(red),2))
+redB=np.real(np.dot(toBloch(m),vectorize(red)))
+PTproR=makeSparse(np.real(DMany([PT,8*TMany([z0,I,P,I,z0,z0,I,P,I,z0]),np.conj(toBloch(5)).T])))
+PTproI=makeSparse(np.imag(DMany([PT,8*TMany([z0,I,P,I,z0,z0,I,P,I,z0]),np.conj(toBloch(5)).T])))
+T12=makeSparse(np.real(DMany([toBloch(m),TrOp([1,1,0,0,0]),fBloch])))
+T15=makeSparse(np.real(DMany([toBloch(m),TrOp([1,0,0,0,1]),fBloch])))
+T45=makeSparse(np.real(DMany([toBloch(m),TrOp([0,0,0,1,1]),fBloch])))
+T1215=makeSparse(np.real(DMany([toBloch(m),TrOp([1,1,0,0,0])-TrOp([1,0,0,0,1]),fBloch])))
+T1245=makeSparse(np.real(DMany([toBloch(m),TrOp([1,1,0,0,0])-TrOp([0,0,0,1,1]),fBloch])))
+c=-np.real(DMany([np.kron([0.,1.],fBloch).T,pro.T,PT.T,vectorize(np.identity(4))]))
+
+  
+def main(red,n):
+        with Model("Negativity") as M:
+                t=M.variable("slack",1,Domain.unbounded())
+                Ra=M.variable("Ra",4**n,Domain.inRange(-1.,1.))
+                Rb=M.variable("Rb",4**n,Domain.inRange(-1.,1.))
+                RaE=Expr.reshape(Ra.asExpr(),NDSet(2**n,2**n))
+                RbE=Expr.reshape(Rb.asExpr(),NDSet(2**n,2**n))
+                
+                cTr12=M.constraint("C1",Expr.mul(T12,Expr.add(Ra,Rb)),Domain.equalsTo(redB))
+                cTr15=M.constraint("C2",Expr.mul(T1215,Expr.add(Ra,Rb)),Domain.equalsTo([0.]*64))
+                cTr45=M.constraint("C3",Expr.mul(T1245,Expr.add(Ra,Rb)),Domain.equalsTo([0.]*64))
+
+                ImPall=Expr.reshape(Expr.mul(DenseMatrix(np.imag(fBloch)),Expr.add(Ra,Rb)),NDSet(2**n,2**n))
+                RePall=Expr.reshape(Expr.mul(DenseMatrix(np.real(fBloch)),Expr.add(Ra,Rb)),NDSet(2**n,2**n))
+                #PSDall=Expr.vstack(Expr.hstack(RePall,Expr.mul(-1.,ImPall)),Expr.hstack(ImPall,RePall))
+                
+                ImPa=Expr.reshape(Expr.mul(PTproI,Ra),NDSet(4,4))
+                RePa=Expr.reshape(Expr.mul(PTproR,Ra),NDSet(4,4))
+                #PSD1=Expr.vstack(Expr.hstack(RePa,Expr.mul(-1.,ImPa)),Expr.hstack(ImPa,RePa))
+                
+                ImPb=Expr.reshape(Expr.mul(PTproI,Rb),NDSet(4,4))
+                RePb=Expr.reshape(Expr.mul(PTproR,Rb),NDSet(4,4))
+                #PSD2=Expr.mul(-1.,Expr.vstack(Expr.hstack(RePb,Expr.mul(-1.,ImPb)),Expr.hstack(ImPb,RePb)))
+                
+                cPSDall=M.constraint(RePall,Domain.inPSDCone())
+                cPSDa=M.constraint(RePa,Domain.inPSDCone())
+                cPSDb=M.constraint(Expr.mul(-1.,RePb),Domain.inPSDCone())
+
+                M.constraint(Expr.sub(t.asExpr(),Expr.dot(vectorize(-np.identity(4)),Expr.mul(PTproR,Rb))),Domain.greaterThan(0.))
+
+                M.objective(ObjectiveSense.Minimize,t)
+                M.solve()
+                return t.level()
+
 
 if __name__ == '__main__':
-        fBloch=np.conj(toBloch(5)).T#3.125% sparse
-        pro=8*TMany([z0,I,P,I,z0,z0,I,P,I,z0])#0.4% sparse
-
-        c=-DMany([np.kron([0.,1.],fBloch).T,pro.T,PT.T,vectorize(np.identity(4))])
-        c=matrix(np.real(c) + [0.]*2048)
-
-        G1=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,1,0,0,0]),fBloch])) #0.8% sparse
-
-
-        G2=np.kron([1.,1.],DMany([toBloch(3),TrOp([1,0,0,0,1]),fBloch])) #0.8% sparse
-
-        G3=np.kron([1.,1.],DMany([toBloch(3),TrOp([0,0,0,1,1]),fBloch])) #0.8% sparse
-
-        Gnorm1=np.vstack(([0.]*2048,np.kron([0.,-1.],np.identity(1024))))
-        Gnorm2=np.vstack(([0.]*2048,np.kron([-1.,0.],np.identity(1024))))
-        hnorm=[100.]+[0.]*1024
-
-        G5=-np.kron([1.,0.],DMany([PT,pro,fBloch]))
-        G6=np.kron([0.,1.],DMany([PT,pro,fBloch]))
-        hpos1=[0.]*16
-        G7=-np.kron([1.,1.],fBloch)
-        hpos2=[0.]*1024
-
-        G=sparse(matrix(np.real(np.vstack((G1,-G1,G2,-G2,G3,-G3,Gnorm1,Gnorm2,G5,G6,G7))) + [[0.]*2048]*3490))
-
-        state=YfaultyCluster(5,0.01)
-        h1=DMany([toBloch(3),TrOp([1,1,0,0,0,1]),vectorize(state)])
-        h=matrix(np.real(np.hstack((h1,-h1,h1,-h1,h1,-h1,hnorm,hnorm,hpos1,hpos1,hpos2)))+[0.]*3490)
-
-        dims={'l':384 ,'q':[1025,1025], 's':[4,4,32]}
-
-        #sol=solvers.conelp(c, G, h, dims)
-
-        GfourR=np.kron([1.,1.],DMany([toBloch(4),TrOp([1,0,0,0,0]),fBloch]))
-        GfourL=np.kron([1.,1.],DMany([toBloch(4),TrOp([0,0,0,0,1]),fBloch]))
-        Gfour=GfourR-GfourL
-        hfour=np.array([0.]*256)
-
-        Gone=sparse(matrix(np.real(np.vstack((G1,-G1,Gfour,-Gfour))) + [[0.]*2048]*640))
-        Gtwo=[sparse(matrix(np.real(np.vstack((G5))) + [[0.]*2048]*16))]
-        Gtwo +=[sparse(matrix(np.real(np.vstack((G6))) + [[0.]*2048]*16))]
-        Gtwo +=[sparse(matrix(np.real(np.vstack((G7))) + [[0.]*2048]*1024))]
-        hone=matrix(np.real(np.hstack((h1,-h1,hfour,-hfour)))+[0.]*640)
-        htwo=[matrix([[0.]*4]*4)]
-        htwo +=[matrix([[0.]*4]*4)]
-        htwo +=[matrix([[0.]*32]*32)]
-        solvers.options['reltol']=1e-11
-        sol=solvers.sdp(c,Gl=Gone,hl=hone,Gs=Gtwo,hs=htwo,solver='dsdp')
-        print np.dot(c.T,sol['x'])
+        print main(h1,5)
+        sys.exit(0)
